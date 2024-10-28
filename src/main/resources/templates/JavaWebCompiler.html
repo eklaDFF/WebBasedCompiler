@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monaco Editor with xterm.js</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        #editor {
+            height: 70%;
+            width: 100%;
+        }
+        #terminal {
+            padding-top: 1px;
+            background-color: #4B4948;
+            height: 30%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Monaco Editor -->
+<div id="editor"></div>
+
+<!-- Terminal -->
+<div id="terminal"></div>
+
+<!-- Monaco and xterm.js Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/loader.js"></script>
+
+<script th:inline="javascript">
+    // xterm.js initialization
+    const term = new Terminal({
+        theme: {
+            background: '#1e1e1e',
+            foreground: '#ffffff',
+        },
+        cursorBlink: true,
+    });
+    term.open(document.getElementById('terminal'));
+    // Simulate input/output
+    term.write('Terminal\r\n');
+    let inputBuffer = '';  // Buffer to store the current input
+    term.onKey(e => {
+        const char = e.key;
+        if (char === '\r') { // Enter key
+            term.write('\r\nOutput for command :\r\n');
+        }else if(char === '\u007f'){
+            if (inputBuffer.length > 0) {
+                inputBuffer = inputBuffer.slice(0, -1);  // Remove last character
+                term.write('\b \b');  // Move cursor back, print space to clear the character, move cursor back again
+            }
+        } else {
+            inputBuffer += char;  // Add to buffer
+            term.write(char);
+        }
+    });
+
+    // Monaco Editor Initialization
+    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+        const editor = monaco.editor.create(document.getElementById('editor'), {
+            value: [
+                [[${defaultCode}]]
+            ].join('\n'),
+            language: 'java',
+            theme: 'vs-dark'
+        });
+
+        //Defining Function to send code to backend
+        function submitCode() {
+            const code = editor.getValue();
+            fetch('/submitCode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code: code })  // Send code as JSON object
+            })
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);  // Display server response in console
+                    term.write(data + '\r\n');  // Write response in terminal (if using xterm.js)
+                })
+                .then(output => {
+                    term.write(output);
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Sample functionality: On pressing a button or key, execute code
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function () {
+            const code = editor.getValue();
+            console.log('Ctrl+Enter detected');
+            term.write('> Running Code...\r\n');
+            // You could replace this with actual code execution, this is a sample
+            term.write(code + '\r\n');
+            submitCode();
+        });
+    });
+
+</script>
+
+</body>
+</html>
