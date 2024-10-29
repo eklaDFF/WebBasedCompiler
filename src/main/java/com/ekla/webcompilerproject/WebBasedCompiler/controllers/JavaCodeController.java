@@ -31,7 +31,6 @@ public class JavaCodeController {
     @ResponseBody
     public String submitCode(@RequestBody JavaCode javaCode, Model model){
         model.addAttribute("javaCode", javaCode);
-        System.out.println(javaCode.getCode());
         return executeJavaCode(javaCode);
     }
 
@@ -53,7 +52,6 @@ public class JavaCodeController {
             String compiledProcessOutput = new String(compiledProcess.getInputStream().readAllBytes()).replace("\n","\r\n");
             int compiledProcessResult = compiledProcess.waitFor();
             if (compiledProcessResult != 0) {
-                System.out.println("Compilation Error:\n" + compiledProcessOutput);
                 return "Compilation Error:\r\n" + compiledProcessOutput;
             }
 
@@ -61,8 +59,6 @@ public class JavaCodeController {
             Process runProcess = new ProcessBuilder("java","-cp", tempDirectoryPath.toString(),"Main").redirectErrorStream(true).start();
             runProcessOutput = new String(runProcess.getInputStream().readAllBytes()).replace("\n","\r\n");
             runProcessResult = runProcess.waitFor();
-            System.out.println("Run Process Output:\n" + runProcessOutput);
-            System.out.println("Run Process Result:\n" + runProcessResult);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
